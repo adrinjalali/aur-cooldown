@@ -476,6 +476,16 @@ def installed_version(pkg):
     return r.stdout.split()[1] if r.returncode == 0 and r.stdout.split() else None
 
 
+def artifact_pkgname(path):
+    """Package name of a built '<name>-<pkgver>-<pkgrel>-<arch>.pkg.tar.*' file.
+
+    pkgver, pkgrel and arch can never contain a hyphen, so the name is
+    everything before the last three hyphens, even when the name itself
+    contains hyphens or digits.
+    """
+    return os.path.basename(path).rsplit(".pkg.tar.", 1)[0].rsplit("-", 3)[0]
+
+
 # --- observe -----------------------------------------------------------------
 
 def cmd_observe(args):
@@ -687,10 +697,16 @@ def cmd_upgrade(args):
                           cwd=build, env=makepkg_env).returncode:
             failed.append(pkg)
             continue
+        # A split PKGBUILD emits every one of its subpackages from a single
+        # build. Install only the one this target names: its siblings may
+        # conflict with it (espanso-x11 vs espanso-wayland), and a sibling that
+        # is itself a target gets its own build, so taking it here too would
+        # hand pacman -U the same package twice. Matching the exact name also
+        # leaves out the <pkg>-debug package.
         artifacts = [p for p in sorted(glob.glob(os.path.join(build, "*.pkg.tar.*")))
-                     if not p.endswith(".sig") and "-debug-" not in os.path.basename(p)]
+                     if not p.endswith(".sig") and artifact_pkgname(p) == pkg]
         if not artifacts:
-            print(f"  -> makepkg produced no package for {pkg}")
+            print(f"  -> makepkg produced no {pkg} package")
             failed.append(pkg)
             continue
         ready.append((pkg, build, artifacts))
@@ -698,7 +714,7 @@ def cmd_upgrade(args):
     built = []
     if ready:
         files = [f for _, _, arts in ready for f in arts]
-        print(f"\ninstalling {len(ready)} package(s)")
+        print(f"\ninstalling {len(files)} package(s)")
         rc = run_root(["pacman", "-U", "--noconfirm", *files], sudo, flags)
         if rc == 0:
             built = [pkg for pkg, _, _ in ready]
