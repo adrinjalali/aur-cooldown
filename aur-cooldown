@@ -46,7 +46,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 
-VERSION = "0.8.0"
+VERSION = "0.8.1"
 
 HOME = os.path.expanduser("~")
 XDG_DATA = os.environ.get("XDG_DATA_HOME", os.path.join(HOME, ".local/share"))

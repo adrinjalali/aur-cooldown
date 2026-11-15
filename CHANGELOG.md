@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.8.1 — 2026-11-15
 
 - `upgrade` now installs only the packages it was asked to upgrade from a split
   PKGBUILD, instead of every package the build produces. Before, upgrading
